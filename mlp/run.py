@@ -22,9 +22,11 @@ from torch.nn import BCELoss
 from addict import Dict
 from common import CSVDataset
 
-
 from torch.utils.tensorboard import SummaryWriter
 # https://pytorch.org/tutorials/intermediate/tensorboard_tutorial.html
+
+## CONFIGs
+ID = 'iris'
 
 
 class MLP(nn.Module):
@@ -46,7 +48,7 @@ class MLP(nn.Module):
 
         #print(last_layer_activation)
         self.act3 = last_layer_activation
- 
+
     # forward propagate input
     def forward(self, X):
         # input to first hidden layer
@@ -55,7 +57,7 @@ class MLP(nn.Module):
          # second hidden layer
         X = self.hidden2(X)
         X = self.act2(X)
-        
+
         # third hidden layer and output
         X = self.hidden3(X)
         X = self.act3(X)
@@ -131,10 +133,9 @@ def predict(row, model):
     return yhat
 # %%
 # prepare the data
-id = 'ionosphere'
-writer = SummaryWriter(f'runs/zerotest_{id}') # default `log_dir` is "runs" - we'll be more specific here
+writer = SummaryWriter(f'runs/zerotest_{ID}') # default `log_dir` is "runs" - we'll be more specific here
 
-print(f"Problem: {id}")
+print(f"Problem: {ID}")
 PROBLEM = dict()
 PROBLEM["iris"] = Dict({"path": 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/iris.csv',
                     "activation": nn.Softmax(dim=1),
@@ -144,13 +145,14 @@ PROBLEM["ionosphere"] =  Dict({"path": 'https://raw.githubusercontent.com/jbrown
                           "activation": nn.Sigmoid(),
                           "criterion": nn.BCELoss(),
                           "n_outputs": 1})
-
+assert ID in PROBLEM.keys()
+problem = PROBLEM[ID]
 
 # load the dataset
-dataset = CSVDataset(PROBLEM[id].path)
+dataset = CSVDataset(PROBLEM[ID].path)
 
-print(PROBLEM[id].n_outputs)
-print(PROBLEM[id].criterion)
+print(PROBLEM[ID].n_outputs)
+print(PROBLEM[ID].criterion)
 print(dataset.df.shape)
 
 n_features = dataset.df.shape[1] - 1 # subtracting one as the last is input col
@@ -160,8 +162,8 @@ dataset.df.sample(5)
 
 # %%
 model = MLP(n_features,
-            PROBLEM[id].n_outputs,
-            PROBLEM[id].activation)
+            problem.n_outputs,
+            problem.activation)
 
 #writer.add_graph(model) # https://pytorch.org/docs/stable/tensorboard.html
 #writer.close()
@@ -170,7 +172,7 @@ model = MLP(n_features,
 train_dl, test_dl = prepare_data(dataset)
 train_model(train_dl,
             model,
-            PROBLEM[id].criterion)
+            problem.criterion)
 
 print("Done")
 #evaluate_model(train_dl, model)
