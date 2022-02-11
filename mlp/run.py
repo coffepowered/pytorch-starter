@@ -3,7 +3,7 @@
 from typing import Union
 import numpy as np
 import pandas as pd
-import torch 
+import torch
 
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import accuracy_score
@@ -23,30 +23,33 @@ from addict import Dict
 from common import CSVDataset
 
 from torch.utils.tensorboard import SummaryWriter
+
 # https://pytorch.org/tutorials/intermediate/tensorboard_tutorial.html
 
 ## CONFIGs
-ID = 'iris'
+ID = "iris"
 
 
 class MLP(nn.Module):
     # define model elements
-    def __init__(self, n_inputs, n_outputs, last_layer_activation, enable_tracing=False):
+    def __init__(
+        self, n_inputs, n_outputs, last_layer_activation, enable_tracing=False
+    ):
         super(MLP, self).__init__()
         self.enable_tracing = enable_tracing
         # input to first hidden layer
         self.hidden1 = torch.nn.Linear(n_inputs, 10)
-        kaiming_uniform_(self.hidden1.weight, nonlinearity='relu')
+        kaiming_uniform_(self.hidden1.weight, nonlinearity="relu")
         self.act1 = torch.nn.ReLU()
         # second hidden layer
         self.hidden2 = torch.nn.Linear(10, 8)
-        kaiming_uniform_(self.hidden2.weight, nonlinearity='relu')
+        kaiming_uniform_(self.hidden2.weight, nonlinearity="relu")
         self.act2 = torch.nn.ReLU()
         # third hidden layer and output
         self.hidden3 = torch.nn.Linear(8, n_outputs)
         xavier_uniform_(self.hidden3.weight)
 
-        #print(last_layer_activation)
+        # print(last_layer_activation)
         self.act3 = last_layer_activation
 
     # forward propagate input
@@ -54,7 +57,7 @@ class MLP(nn.Module):
         # input to first hidden layer
         X = self.hidden1(X)
         X = self.act1(X)
-         # second hidden layer
+        # second hidden layer
         X = self.hidden2(X)
         X = self.act2(X)
 
@@ -62,6 +65,7 @@ class MLP(nn.Module):
         X = self.hidden3(X)
         X = self.act3(X)
         return X
+
 
 def prepare_data(dataset: CSVDataset) -> Union[DataLoader, DataLoader]:
     # calculate split
@@ -71,9 +75,10 @@ def prepare_data(dataset: CSVDataset) -> Union[DataLoader, DataLoader]:
     test_dl = DataLoader(test, batch_size=1024, shuffle=False)
     return train_dl, test_dl
 
+
 def train_model(train_dl, model, criterion=BCELoss(), num_epochs=200):
     # define the optimization
-    #criterion = BCELoss()
+    # criterion = BCELoss()
     optimizer = SGD(model.parameters(), lr=0.01, momentum=0.9)
     # enumerate epochs
     for epoch in range(num_epochs):
@@ -82,7 +87,7 @@ def train_model(train_dl, model, criterion=BCELoss(), num_epochs=200):
         epoch_loss = 0
         for i, (inputs, targets) in enumerate(train_dl):
             # clear the gradients
-            optimizer.zero_grad() # accumulation is done inside the optimizers
+            optimizer.zero_grad()  # accumulation is done inside the optimizers
             # compute the model output
             yhat = model(inputs)
             # calculate loss
@@ -95,13 +100,12 @@ def train_model(train_dl, model, criterion=BCELoss(), num_epochs=200):
 
         # Only logging below:
         if epoch % 5 == 0:
-            writer.add_scalar('training loss',
-                            epoch_loss,
-                            epoch)
+            writer.add_scalar("training loss", epoch_loss, epoch)
 
         if epoch % 100 == 0:
             print(f"Epoch {epoch}, loss: {loss}")
     writer.close()
+
 
 def evaluate_model(test_dl: Dataset, model: MLP):
     predictions, actuals = list(), list()
@@ -122,6 +126,7 @@ def evaluate_model(test_dl: Dataset, model: MLP):
     acc = accuracy_score(actuals, predictions)
     return acc
 
+
 # make a class prediction for one row of data
 def predict(row, model):
     # convert row to data
@@ -131,20 +136,32 @@ def predict(row, model):
     # retrieve numpy array
     yhat = yhat.detach().numpy()
     return yhat
+
+
 # %%
 # prepare the data
-writer = SummaryWriter(f'runs/zerotest_{ID}') # default `log_dir` is "runs" - we'll be more specific here
+writer = SummaryWriter(
+    f"runs/zerotest_{ID}"
+)  # default `log_dir` is "runs" - we'll be more specific here
 
 print(f"Problem: {ID}")
 PROBLEM = dict()
-PROBLEM["iris"] = Dict({"path": 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/iris.csv',
-                    "activation": nn.Softmax(dim=1),
-                    "criterion": nn.CrossEntropyLoss(),
-                    "n_outputs": 3})
-PROBLEM["ionosphere"] =  Dict({"path": 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/ionosphere.csv',
-                          "activation": nn.Sigmoid(),
-                          "criterion": nn.BCELoss(),
-                          "n_outputs": 1})
+PROBLEM["iris"] = Dict(
+    {
+        "path": "https://raw.githubusercontent.com/jbrownlee/Datasets/master/iris.csv",
+        "activation": nn.Softmax(dim=1),
+        "criterion": nn.CrossEntropyLoss(),
+        "n_outputs": 3,
+    }
+)
+PROBLEM["ionosphere"] = Dict(
+    {
+        "path": "https://raw.githubusercontent.com/jbrownlee/Datasets/master/ionosphere.csv",
+        "activation": nn.Sigmoid(),
+        "criterion": nn.BCELoss(),
+        "n_outputs": 1,
+    }
+)
 assert ID in PROBLEM.keys()
 problem = PROBLEM[ID]
 
@@ -155,26 +172,22 @@ print(PROBLEM[ID].n_outputs)
 print(PROBLEM[ID].criterion)
 print(dataset.df.shape)
 
-n_features = dataset.df.shape[1] - 1 # subtracting one as the last is input col
+n_features = dataset.df.shape[1] - 1  # subtracting one as the last is input col
 print(n_features)
 
 dataset.df.sample(5)
 
 # %%
-model = MLP(n_features,
-            problem.n_outputs,
-            problem.activation)
+model = MLP(n_features, problem.n_outputs, problem.activation)
 
-#writer.add_graph(model) # https://pytorch.org/docs/stable/tensorboard.html
-#writer.close()
+# writer.add_graph(model) # https://pytorch.org/docs/stable/tensorboard.html
+# writer.close()
 
 # %%
 train_dl, test_dl = prepare_data(dataset)
-train_model(train_dl,
-            model,
-            problem.criterion)
+train_model(train_dl, model, problem.criterion)
 
 print("Done")
-#evaluate_model(train_dl, model)
+# evaluate_model(train_dl, model)
 
 # %%

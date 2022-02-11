@@ -16,11 +16,15 @@ class CSVDataset(Dataset):
         self.X = df.values[:, :-1]
         self.y = df.values[:, -1]
         # ensure input data is floats
-        self.X = self.X.astype('float32')
-        self.y = OneHotEncoder(sparse=False, drop='if_binary').fit_transform(self.y.reshape(-1,1)).astype('float32')
-        
+        self.X = self.X.astype("float32")
+        self.y = (
+            OneHotEncoder(sparse=False, drop="if_binary")
+            .fit_transform(self.y.reshape(-1, 1))
+            .astype("float32")
+        )
+
         # Now works also with CE loss using class probabilities instead of indices
-        # CrossEntropyLoss (see diff wrt class indices class indices, see pytorch doc https://pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html) 
+        # CrossEntropyLoss (see diff wrt class indices class indices, see pytorch doc https://pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html)
 
         self.df = df  # so that I can view it
 
