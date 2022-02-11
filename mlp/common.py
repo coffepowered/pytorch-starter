@@ -1,19 +1,14 @@
-from typing import Union
-import numpy as np
 import pandas as pd
-import torch
 
-from sklearn.preprocessing import LabelEncoder
-from sklearn.preprocessing import LabelEncoder
-
-from torch import Tensor
 from torch.utils.data import Dataset
-from torch.utils.data import DataLoader
+from torch.utils.data import random_split
+
+from sklearn.preprocessing import OneHotEncoder
 
 
 class CSVDataset(Dataset):
     # load the dataset
-    def __init__(self, path):
+    def __init__(self, path: str):
         # load the csv file as a dataframe
         df = pd.read_csv(path, header=None)
 
@@ -21,21 +16,15 @@ class CSVDataset(Dataset):
         self.X = df.values[:, :-1]
         self.y = df.values[:, -1]
         # ensure input data is floats
-        self.X = self.X.astype('float32')
-        # label encode target and ensure the values are floats
-        num_labels = len(np.unique(self.y))
+        self.X = self.X.astype("float32")
+        self.y = (
+            OneHotEncoder(sparse=False, drop="if_binary")
+            .fit_transform(self.y.reshape(-1, 1))
+            .astype("float32")
+        )
 
-        # TODO: replace this with OneHotEncoder:
-        # https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.OneHotEncoder.html
-        self.y = LabelEncoder().fit_transform(self.y)
-
-        if num_labels == 2: # BCELoss
-            self.y = self.y.astype('float32')
-            print("Reshaping to 2D array")
-            self.y = self.y.reshape((len(self.y), 1))
-
-        elif num_labels>2: # CrossEntropyLoss (with class indices, see pytorch doc https://pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html) 
-            self.y = self.y.astype(np.int64) # dtypes: https://github.com/wkentaro/pytorch-for-numpy-users <3
+        # Now works also with CE loss using class probabilities instead of indices
+        # CrossEntropyLoss (see diff wrt class indices class indices, see pytorch doc https://pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html)
 
         self.df = df  # so that I can view it
 
@@ -53,4 +42,4 @@ class CSVDataset(Dataset):
         test_size = round(n_test * len(self.X))
         train_size = len(self.X) - test_size
         # calculate the split
-        return torch.utils.data.random_split(self, [train_size, test_size])
+        return random_split(self, [train_size, test_size])
